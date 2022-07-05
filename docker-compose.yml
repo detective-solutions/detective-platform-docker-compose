@@ -1,0 +1,203 @@
+version: "3.2"
+
+networks:
+  detective-platform:
+    driver: bridge
+
+services:
+  zookeeper:
+    image: bitnami/zookeeper:3.6.2
+    restart: unless-stopped
+    ports:
+      - 2181:2181
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    networks:
+      - detective-platform
+
+  kafka1:
+    image: bitnami/kafka:2.7.0
+    restart: unless-stopped
+    ports:
+      - 9093:9093
+    environment:
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CLIENT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_LISTENERS=CLIENT://:9092,EXTERNAL://:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=CLIENT://kafka1:9092,EXTERNAL://localhost:9093
+      - KAFKA_INTER_BROKER_LISTENER_NAME=CLIENT
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+    depends_on:
+      - zookeeper
+    networks:
+      - detective-platform
+
+  kafka2:
+    image: bitnami/kafka:2.7.0
+    restart: unless-stopped
+    ports:
+      - 9094:9094
+    environment:
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CLIENT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_LISTENERS=CLIENT://:9092,EXTERNAL://:9094
+      - KAFKA_CFG_ADVERTISED_LISTENERS=CLIENT://kafka2:9092,EXTERNAL://localhost:9094
+      - KAFKA_INTER_BROKER_LISTENER_NAME=CLIENT
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+    depends_on:
+      - zookeeper
+    networks:
+      - detective-platform
+
+  kafka3:
+    image: bitnami/kafka:2.7.0
+    restart: unless-stopped
+    ports:
+      - 9095:9095
+    environment:
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CLIENT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_LISTENERS=CLIENT://:9092,EXTERNAL://:9095
+      - KAFKA_CFG_ADVERTISED_LISTENERS=CLIENT://kafka3:9092,EXTERNAL://localhost:9095
+      - KAFKA_INTER_BROKER_LISTENER_NAME=CLIENT
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+    depends_on:
+      - zookeeper
+    networks:
+      - detective-platform
+
+  kafdrop:
+    image: obsidiandynamics/kafdrop:latest
+    restart: unless-stopped
+    ports:
+      - 9000:9000
+    environment:
+      - KAFKA_BROKERCONNECT=kafka1:9092,kafka2:9092,kafka3:9092
+    depends_on:
+      - kafka1
+    networks:
+      - detective-platform
+
+  dgraph-standalone:
+    image: dgraph/standalone:v21.03.0
+    restart: unless-stopped
+    ports:
+      - 8080:8080
+      - 9080:9080
+      - 8000:8000
+    depends_on:
+      - kafka1
+    networks:
+      - detective-platform
+
+  detective-client:
+    image: quay.io/detective.solutions/detective-client:$VERSION_DETECTIVE_CLIENT
+    restart: unless-stopped
+    ports:
+      - 80:80
+      - 443:443
+    networks:
+      - detective-platform
+
+  auth-service:
+    image: quay.io/detective.solutions/auth-service:$VERSION_AUTH_SERVICE
+    restart: unless-stopped
+    ports:
+      - 1111:1111
+    environment:
+      - ACCESS_TOKEN_SECRET=$ACCESS_TOKEN_SECRET
+      - REFRESH_TOKEN_SECRET=$REFRESH_TOKEN_SECRET
+      - SERVER_PORT=1111
+      - DATABASE_GRPC_SERVICE_NAME=dgraph-standalone
+      - DATABASE_GRPC_PORT=9080
+    networks:
+      - detective-platform
+
+  websocket-gateway:
+    image: quay.io/detective.solutions/websocket-gateway:$VERSION_WEBSOCKET_GATEWAY
+    restart: unless-stopped
+    ports:
+      - 7777:7777
+    environment:
+      - ACCESS_TOKEN_SECRET=$ACCESS_TOKEN_SECRET
+      - REFRESH_TOKEN_SECRET=$REFRESH_TOKEN_SECRET
+      - WEBSOCKET_PORT=7777
+      - KAFKA_SERVICE_NAME=kafka1
+      - KAFKA_PORT=9093
+    networks:
+      - detective-platform
+
+  masking-service:
+    image: quay.io/detective.solutions/masking-service:$VERSION_MASKING_SERVICE
+    restart: unless-stopped
+    environment:
+      - DGRAPH_SERVICE_NAME=dgraph-standalone
+      - DGRAPH_PORT=9080
+      - KAFKA_SERVICE_NAME=kafka1
+      - KAFKA_PORT=9092
+    depends_on:
+      - kafka1
+      - dgraph-standalone
+    networks:
+      - detective-platform
+
+  query-service:
+    image: quay.io/detective.solutions/query-service:$VERSION_QUERY_SERVICE
+    restart: unless-stopped
+    environment:
+      - DGRAPH_SERVICE_NAME=dgraph-standalone
+      - DGRAPH_PORT=9080
+      - KAFKA_SERVICE_NAME=kafka1
+      - KAFKA_PORT=9092
+      - TRINO_SERVICE_NAME=coordinator
+      - TRINO_PORT=8080
+    depends_on:
+      - kafka1
+      - dgraph-standalone
+    networks:
+      - detective-platform
+
+  catalog-service:
+    image: quay.io/detective.solutions/catalog-service:$VERSION_CATALOG_SERVICE
+    restart: unless-stopped
+    ports:
+      - 3003:3003
+    environment:
+      - DGRAPH_SERVICE_NAME=dgraph-standalone
+      - DGRAPH_PORT=9080
+      - TRINO_SERVICE_NAME=coordinator
+      - TRINO_PORT=8080
+      - KAFKA_SERVICE_NAME=kafka1
+      - KAFKA_PORT=9092
+      - SECRETKEY=123
+      - ALGORITHM=123
+    depends_on:
+      - coordinator
+      - dgraph-standalone
+    networks:
+      - detective-platform
+
+  trino-coordinator:
+    image: quay.io/detective.solutions/trino-coordinator:$VERSION_TRINO_COORDINATOR
+    restart: unless-stopped
+    ports:
+      - 8083:8080
+    volumes:
+      - ./mount2/etc/catalog:/usr/local/trino/etc/catalog
+    command: http://trino-coordinator:8080 coordinator
+    networks:
+      - detective-platform
+
+  #worker0:
+  #  image: quay.io/detective.solutions/trino-worker:$VERSION_TRINO_WORKER
+  #  restart: unless-stopped
+  #  ports:
+  #    - 8081:8081
+  #  volumes:
+  #    - ./mount2/etc/catalog:/usr/local/trino/etc/catalog
+  #  command: http://coordinator:8080 worker0
+  #  networks:
+  #    - detective-platform
