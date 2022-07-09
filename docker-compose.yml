@@ -177,9 +177,6 @@ services:
     restart: unless-stopped
     ports:
       - 8083:8080
-    volumes:
-      - ./mount2/etc/catalog:/usr/local/trino/etc/catalog
-    command: http://trino-coordinator:8080 coordinator
     networks:
       - detective-platform
 
@@ -188,8 +185,6 @@ services:
   #  restart: unless-stopped
   #  ports:
   #    - 8081:8081
-  #  volumes:
-  #    - ./mount2/etc/catalog:/usr/local/trino/etc/catalog
   #  command: http://coordinator:8080 worker0
   #  networks:
   #    - detective-platform
