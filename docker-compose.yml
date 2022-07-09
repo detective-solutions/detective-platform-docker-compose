@@ -101,7 +101,6 @@ services:
     environment:
       - ACCESS_TOKEN_SECRET=$ACCESS_TOKEN_SECRET
       - REFRESH_TOKEN_SECRET=$REFRESH_TOKEN_SECRET
-      - SERVER_PORT=1111
       - DATABASE_GRPC_SERVICE_NAME=dgraph-standalone
       - DATABASE_GRPC_PORT=9080
     networks:
@@ -115,7 +114,6 @@ services:
     environment:
       - ACCESS_TOKEN_SECRET=$ACCESS_TOKEN_SECRET
       - REFRESH_TOKEN_SECRET=$REFRESH_TOKEN_SECRET
-      - WEBSOCKET_PORT=7777
       - KAFKA_SERVICE_NAME=kafka1
       - KAFKA_PORT=9093
     networks:
