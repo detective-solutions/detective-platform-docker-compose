@@ -93,15 +93,6 @@ services:
     networks:
       - detective-platform
 
-  detective-client:
-    image: quay.io/detective.solutions/detective-client:$VERSION_DETECTIVE_CLIENT
-    restart: unless-stopped
-    ports:
-      - 80:80
-      - 443:443
-    networks:
-      - detective-platform
-
   auth-service:
     image: quay.io/detective.solutions/auth-service:$VERSION_AUTH_SERVICE
     restart: unless-stopped
