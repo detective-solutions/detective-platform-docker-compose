@@ -116,6 +116,8 @@ services:
       - REFRESH_TOKEN_SECRET=$REFRESH_TOKEN_SECRET
       - KAFKA_SERVICE_NAME=kafka1
       - KAFKA_PORT=9092
+    depends_on:
+      - kafka1
     networks:
       - detective-platform
 
