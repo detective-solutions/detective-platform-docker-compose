@@ -162,6 +162,15 @@ services:
     networks:
       - detective-platform
 
+  trino-coordinator:
+    image: quay.io/detective.solutions/trino-coordinator:$VERSION_TRINO_COORDINATOR
+    container_name: trino-coordinator
+    restart: unless-stopped
+    ports:
+      - 8083:8080
+    networks:
+      - detective-platform
+
   catalog-service:
     image: quay.io/detective.solutions/catalog-service:$VERSION_CATALOG_SERVICE
     container_name: catalog-service
@@ -180,14 +189,6 @@ services:
     depends_on:
       - trino-coordinator
       - dgraph-standalone
-    networks:
-      - detective-platform
-
-  trino-coordinator:
-    image: quay.io/detective.solutions/trino-coordinator:$VERSION_TRINO_COORDINATOR
-    restart: unless-stopped
-    ports:
-      - 8083:8080
     networks:
       - detective-platform
 
