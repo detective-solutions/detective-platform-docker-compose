@@ -197,6 +197,5 @@ services:
   #  restart: unless-stopped
   #  ports:
   #    - 8081:8081
-  #  command: http://coordinator:8080 worker0
   #  networks:
   #    - detective-platform
