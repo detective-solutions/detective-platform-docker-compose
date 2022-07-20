@@ -151,10 +151,10 @@ services:
     environment:
       - DGRAPH_SERVICE_NAME=dgraph-standalone
       - DGRAPH_PORT=9080
+      - TRINO_SERVICE_NAME=trino-coordinator
+      - TRINO_PORT=8083
       - KAFKA_SERVICE_NAME=kafka1
       - KAFKA_PORT=9092
-      - TRINO_SERVICE_NAME=trino-coordinator
-      - TRINO_PORT=8080
     depends_on:
       - kafka1
       - dgraph-standalone
